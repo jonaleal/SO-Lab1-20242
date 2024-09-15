@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h> // Necesario para usar la estructura stat
 
 // Estructura para almacenar una línea
 typedef struct LineNode {
@@ -54,6 +55,25 @@ ssize_t read_line(char **lineptr, size_t *n, FILE *stream) {
     return num_chars;
 }
 
+// Función para verificar si dos archivos son el mismo (hardlinked)
+int are_files_same(const char *file1, const char *file2) {
+    struct stat stat1, stat2;
+
+    // Obtener información del primer archivo
+    if (stat(file1, &stat1) != 0) {
+        exit(1);
+    }
+
+    // Obtener información del segundo archivo
+    if (stat(file2, &stat2) != 0) {
+        exit(1);
+    }
+
+    // Comparar el número de dispositivo e inodo
+    return (stat1.st_dev == stat2.st_dev && stat1.st_ino == stat2.st_ino);
+}
+
+
 // Función principal
 int main(int argc, char *argv[]) {
     FILE *input_file = stdin;
@@ -68,23 +88,28 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if (argc >= 2) {
+    if (argc == 2) {
         input_file = fopen(argv[1], "r");
         if (input_file == NULL) {
-            fprintf(stderr, "error: cannot open file '%s'\n", argv[1]);
+            fprintf(stderr, "reverse: cannot open file '%s'\n", argv[1]);
             exit(1);
         }
     }
 
     if (argc == 3) {
+        input_file = fopen(argv[1], "r");
         output_file = fopen(argv[2], "w");
+        if (input_file == NULL) {
+            fprintf(stderr, "reverse: cannot open file '%s'\n", argv[1]);
+            exit(1);
+        }
         if (output_file == NULL) {
-            fprintf(stderr, "error: cannot open file '%s'\n", argv[2]);
+            fprintf(stderr, "reverse: cannot open file '%s'\n", argv[2]);
             exit(1);
         }
 
-        if (strcmp(argv[1], argv[2]) == 0) {
-            fprintf(stderr, "El archivo de entrada y salida deben diferir\n");
+        if (strcmp(argv[1], argv[2]) == 0 || are_files_same(argv[1], argv[2])) {
+            fprintf(stderr, "reverse: input and output file must differ\n");
             exit(1);
         }
     }
@@ -109,4 +134,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
